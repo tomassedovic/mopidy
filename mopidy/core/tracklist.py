@@ -358,14 +358,23 @@ class TracklistController:
 
         If ``at_position`` is given, the tracks are inserted at the given
         position in the tracklist. If ``at_position`` is not given, the tracks
-        are appended to the end of the tracklist.
+        are appended to the end of the tracklist. To insert tracks at the
+        beginning of the tracklist, pass ``0``. Supply a negative integer to
+        calculate a position from the end of the tracklist, as opposed to the
+        beginning of the tracklist.
+
+        The ``at_position`` argument also accepts offset values, supplied as a
+        string. They take the form "+N" or "-N". For example, "+0" will insert
+        new tracks directly after the current track, and "-2" will insert new
+        tracks two positions above the current track. The syntax matches MPD's
+        support for offset values.
 
         Triggers the :meth:`mopidy.core.CoreListener.tracklist_changed` event.
 
         :param tracks: tracks to add
         :type tracks: list of :class:`mopidy.models.Track` or :class:`None`
         :param at_position: position in tracklist to add tracks
-        :type at_position: int or :class:`None`
+        :type at_position: int, str or :class:`None`
         :param uris: list of URIs for tracks to add
         :type uris: list of string or :class:`None`
         :rtype: list of :class:`mopidy.models.TlTrack`
@@ -381,7 +390,6 @@ class TracklistController:
 
         tracks is None or validation.check_instances(tracks, Track)
         uris is None or validation.check_uris(uris)
-        validation.check_integer(at_position or 0)
 
         if tracks:
             deprecation.warn("core.tracklist.add:tracks_arg")
@@ -394,6 +402,23 @@ class TracklistController:
 
         tl_tracks = []
         max_length = self.core._config["core"]["max_tracklist_length"]
+
+        if at_position is not None:
+            if isinstance(at_position, str):
+                current_index = self.index()
+                if current_index is None:
+                    raise exceptions.ValidationError(
+                        "Cannot use offset when no track is playing"
+                    )
+                at_position = validation.check_offset_str(
+                    at_position,
+                    current_index,
+                    msg="Expected an integer, or a string representing an offset from the current track, with a prefix of '+' or '-'",
+                )
+            elif not isinstance(at_position, int):
+                raise exceptions.ValidationError(
+                    "Expected an integer, or a string representing an offset from the current track, with a prefix of '+' or '-'",
+                )
 
         for track in tracks:
             if self.get_length() >= max_length:
