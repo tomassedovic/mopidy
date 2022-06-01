@@ -88,6 +88,10 @@ class TracklistState(ValidatedImmutableObject):
     :type random: bool
     :param single: the single mode
     :type single: bool
+    :param stop_after_current: stop playback after the currently playing song ends
+    :type stop_after_current: bool
+    :param play_next_tlid: the next track to play
+    :type play_next_tlid: int
     :param next_tlid: the id for the next added track
     :type next_tlid: int
     :param tl_tracks: the list of tracks
@@ -105,6 +109,12 @@ class TracklistState(ValidatedImmutableObject):
 
     # The single mode. Read-only.
     single = fields.Boolean()
+
+    # The stop-after-current mode. Read-only.
+    stop_after_current = fields.Boolean()
+
+    # The track to play next. Useful for resuming playback post stop-after-current. Read-only.
+    play_next_tlid = fields.Integer(min=0)
 
     # The id of the track to play. Read-only.
     next_tlid = fields.Integer(min=0)

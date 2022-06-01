@@ -327,6 +327,23 @@ class PlaybackController:
                 logger.info("No playable track in the list.")
                 break
 
+        # NOTE(shadower): Clear the _play_next_tlid here. Rather than in
+        # `tracklist.next_track` as we've originally done.
+        #
+        # The reason being: there's multiple calls clients can make that
+        # result in the next track call. So if we call it multiple times,
+        # it'll return the next track only during the first call and then
+        # reset the playlist again on any subsequent call. So what we want to
+        # do is: have next_track always return the next song (if set) and then
+        # clear it once we actually start the playback again. Which is here.
+        #
+        # This might not be the best place (it's the API endpoint rather than
+        # an event triggered on a playback). But it seems to be working fine.
+        # And I think moving it to an event hook should not be too difficult.
+        if self.core.tracklist._play_next_tlid:
+            logger.warn("PLAY: clearing out the `_play_next_tlid` value because we've just started playback again.")
+            self.core.tracklist._play_next_tlid = None
+
         # TODO return result?
 
     def _change(self, pending_tl_track, state):

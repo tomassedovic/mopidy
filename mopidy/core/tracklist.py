@@ -22,6 +22,9 @@ class TracklistController:
         self._shuffled = []
         self._repeat = False
         self._single = False
+        self._stop_after_current = False
+        self._play_next_tlid = None
+
 
     def get_tl_tracks(self):
         """Get tracklist as list of :class:`mopidy.models.TlTrack`."""
@@ -150,6 +153,18 @@ class TracklistController:
             self._trigger_options_changed()
         self._single = value
 
+    def stop_after_current(self):
+        """
+        Stop after playing the current song. This is a toggle.
+        """
+        self._stop_after_current = not self._stop_after_current
+        if self._stop_after_current:
+            logger.debug("Playback will stop after the current song ends.")
+        else:
+            logger.debug("Playback will keep going after the current song.")
+        self._trigger_options_changed()
+        return self._stop_after_current
+
     def index(self, tl_track=None, tlid=None):
         """
         The position of the given track in the tracklist.
@@ -221,10 +236,28 @@ class TracklistController:
         elif self.get_single():
             return None
 
+        next_track = self.next_track(tl_track)
+        if self._stop_after_current:
+            logger.debug(f"Stopping playback after this track: {tl_track}")
+            logger.debug("Clearing stop after current flag.")
+            # Clear the stop-after-current flag. This is a bool toggle
+            # so just calling it again when we know is `True` will flip it to
+            # `False`.
+            self.stop_after_current()
+            assert self._stop_after_current == False
+
+            # Store the next track to play. Without this, returning `None`
+            # would reset the playback to the first song in the playlist. But
+            # we want to continue where we left off.
+            self._play_next_tlid = next_track.tlid
+            logger.debug(f"Storing the next track for when the playback gets resumed: {next_track}")
+            return None
+
+
         # Current difference between next and EOT handling is that EOT needs to
         # handle "single", with that out of the way the rest of the logic is
         # shared.
-        return self.next_track(tl_track)
+        return next_track
 
     def get_next_tlid(self):
         """
@@ -266,6 +299,11 @@ class TracklistController:
         """
         deprecation.warn("core.tracklist.next_track")
         tl_track is None or validation.check_instance(tl_track, TlTrack)
+
+        if self._play_next_tlid:
+            track = self._tl_tracks[self.index(tlid=self._play_next_tlid)]
+            logger.debug(f"Returning previously stored track: {track}")
+            return track
 
         if not self._tl_tracks:
             return None
@@ -611,6 +649,8 @@ class TracklistController:
             random=self.get_random(),
             repeat=self.get_repeat(),
             single=self.get_single(),
+            stop_after_current=self._stop_after_current,
+            play_next_tlid=self._play_next_tlid,
         )
 
     def _load_state(self, state, coverage):
@@ -620,6 +660,8 @@ class TracklistController:
                 self.set_random(state.random)
                 self.set_repeat(state.repeat)
                 self.set_single(state.single)
+                self.stop_after_current = state._stop_after_current
+                self.play_next_tlid = state._play_next_tlid,
             if "tracklist" in coverage:
                 self._next_tlid = max(state.next_tlid, self._next_tlid)
                 self._tl_tracks = list(state.tl_tracks)
