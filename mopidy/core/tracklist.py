@@ -165,6 +165,17 @@ class TracklistController:
         self._trigger_options_changed()
         return self._stop_after_current
 
+    def get_stop_after_current(self):
+        """
+        Get the current value of the `stop_after_current` toggle.
+
+        :class:`True`
+            Playback is stopped after the currently song.
+        :class:`False`
+            Playback continues after current song.
+        """
+        return self._stop_after_current
+
     def index(self, tl_track=None, tlid=None):
         """
         The position of the given track in the tracklist.
