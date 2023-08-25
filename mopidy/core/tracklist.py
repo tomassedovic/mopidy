@@ -260,8 +260,9 @@ class TracklistController:
             # Store the next track to play. Without this, returning `None`
             # would reset the playback to the first song in the playlist. But
             # we want to continue where we left off.
-            self._play_next_tlid = next_track.tlid
-            logger.debug(f"Storing the next track for when the playback gets resumed: {next_track}")
+            if next_track:
+                self._play_next_tlid = next_track.tlid
+                logger.debug(f"Storing the next track for when the playback gets resumed: {next_track}")
             return None
 
 
