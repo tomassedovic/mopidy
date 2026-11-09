@@ -604,6 +604,13 @@ class PlaybackController:
             return
 
         logger.debug("Triggering track playback started event")
+
+        # Stop the song from playing and reset the `stop_after_current_track`
+        # mode.
+        if self.core.tracklist.get_stop_after_current_track():
+            self.stop()
+            self.core.tracklist.set_stop_after_current_track(False)
+
         tl_track = self.get_current_tl_track()
         if tl_track is None:
             return

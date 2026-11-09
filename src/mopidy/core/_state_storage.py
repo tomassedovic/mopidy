@@ -116,6 +116,9 @@ class TracklistControllerState(BaseModel):
     # The single mode. Read-only.
     single: bool = False
 
+    # The stop_after_current_track mode. Read-only.
+    stop_after_current_track: bool = False
+
     # The id of the track to play. Read-only.
     next_tlid: TracklistId = TracklistId(1)
 

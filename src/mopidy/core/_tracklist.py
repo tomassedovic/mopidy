@@ -40,6 +40,7 @@ class TracklistController:
         self._unplayable: list[TlTrack] = []
         self._repeat: bool = False
         self._single: bool = False
+        self._stop_after_current_track: bool = False
 
     def get_tl_tracks(self) -> list[TlTrack]:
         """Get tracklist as list of [TlTrack][mopidy.models.TlTrack]."""
@@ -150,6 +151,8 @@ class TracklistController:
 
         `True`
             Playback is stopped after current song, unless in `repeat` mode.
+            When resumed, the first song in the list will play.
+
         `False`
             Playback continues after current song.
         """
@@ -161,6 +164,38 @@ class TracklistController:
     def _trigger_options_changed(self) -> None:
         logger.debug("Triggering options changed event")
         CoreListener.send("options_changed")
+
+    def set_stop_after_current_track(self, value: bool) -> bool:
+        """Stop after playing the current song.
+
+        `True`
+          Playback is stopped after the current song. When resumed, the next
+          song in the list plays. Unlike the `single` mode, this option is
+          only valid for the current song. Afterwards the playback will keep
+          going without interruption.
+
+        `False`
+          Playback continues after current song.
+        """
+        validation.check_boolean(value)
+        if self.get_stop_after_current_track() != value:
+            self._trigger_options_changed()
+        self._stop_after_current_track = value
+        if self._stop_after_current_track:
+            logger.debug("Playback will stop after the current track ends.")
+        else:
+            logger.debug("Playback will keep going after the current track ends.")
+        return self._stop_after_current_track
+
+    def get_stop_after_current_track(self) -> bool:
+        """Get the current value of the `stop_after_current_track` toggle.
+
+        `True`
+            Playback is stopped after the current track. Playback will start the next track in the list.
+        `False`
+            Playback continues after current track.
+        """
+        return self._stop_after_current_track
 
     def index(
         self,
@@ -602,6 +637,7 @@ class TracklistController:
             random=self.get_random(),
             repeat=self.get_repeat(),
             single=self.get_single(),
+            stop_after_current_track=self.get_stop_after_current_track(),
         )
 
     def _load_state(
@@ -616,6 +652,7 @@ class TracklistController:
                 self.set_random(state.random)
                 self.set_repeat(state.repeat)
                 self.set_single(state.single)
+                self.set_stop_after_current_track(state.stop_after_current_track)
             if "tracklist" in coverage:
                 self._next_tlid = max(TracklistId(state.next_tlid), self._next_tlid)
                 self._tl_tracks = list(state.tl_tracks)
@@ -706,6 +743,8 @@ class TracklistControllerProxy:
     set_repeat = proxy_method(TracklistController.set_repeat)
     get_single = proxy_method(TracklistController.get_single)
     set_single = proxy_method(TracklistController.set_single)
+    get_stop_after_current_track = proxy_method(TracklistController.get_stop_after_current_track)
+    set_stop_after_current_track = proxy_method(TracklistController.set_stop_after_current_track)
     index = proxy_method(TracklistController.index)
     get_eot_tlid = proxy_method(TracklistController.get_eot_tlid)
     get_next_tlid = proxy_method(TracklistController.get_next_tlid)
